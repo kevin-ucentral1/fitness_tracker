@@ -1,20 +1,23 @@
-
-
-import streamlit as st
-
-# prueba de conexión a secrets
-#st.write(st.secrets["postgres"]["host"])
-
-
-# tu aplicación actual
-st.title("Fitness Tracker")
-
-
-import streamlit as st
-from database import conectar
 import streamlit as st
 from database import conectar
 
+
+#----------------prueba temporarl--------
+
+
+
+
+# ---------------------------------
+# CONFIGURACIÓN DE PÁGINA
+# ---------------------------------
+
+import streamlit as st
+from database import conectar
+
+
+# ---------------------------------
+# CONFIGURACIÓN
+# ---------------------------------
 
 st.set_page_config(
     page_title="Fitness Tracker",
@@ -22,18 +25,63 @@ st.set_page_config(
 )
 
 
+# ---------------------------------
+# CONTROL DE ACCESO
+# ---------------------------------
+
+if "login" not in st.session_state:
+    st.session_state.login = False
+
+
+if not st.session_state.login:
+
+    st.title("🔐 Fitness Tracker")
+
+    clave = st.text_input(
+        "Código de acceso",
+        type="password"
+    )
+
+
+    if st.button("Ingresar"):
+
+        if clave == st.secrets["app"]["password"]:
+
+            st.session_state.login = True
+            st.rerun()
+
+        else:
+
+            st.error("❌ Código incorrecto")
+
+
+    st.stop()
+
+
+
+# ---------------------------------
+# APLICACIÓN PRINCIPAL
+# ---------------------------------
+
 st.title("🏋️ Fitness Tracker")
 
+st.write("Registro de entrenamiento")
 
-# Memoria temporal de la sesión
+
+# Inicializar sesión
+
 if "entrenamiento" not in st.session_state:
+
     st.session_state.entrenamiento = []
 
 
-st.subheader("Registrar entrenamiento")
 
+# ---------------------------------
+# AGREGAR EJERCICIO
+# ---------------------------------
 
-# Datos del ejercicio
+st.subheader("➕ Registrar ejercicio")
+
 
 ejercicio = st.text_input(
     "Ejercicio"
@@ -41,7 +89,7 @@ ejercicio = st.text_input(
 
 
 peso = st.number_input(
-    "Peso utilizado (kg)",
+    "Peso (kg)",
     min_value=0.0,
     step=0.5
 )
@@ -61,26 +109,35 @@ repeticiones = st.number_input(
 )
 
 
-# Agregar ejercicio a la sesión
 
-if st.button("➕ Agregar ejercicio"):
+if st.button("Agregar ejercicio"):
 
-    st.session_state.entrenamiento.append(
-        {
-            "ejercicio": ejercicio,
-            "peso": peso,
-            "series": series,
-            "repeticiones": repeticiones
-        }
-    )
+    if ejercicio:
 
-    st.success(
-        f"{ejercicio} agregado"
-    )
+        st.session_state.entrenamiento.append(
+            {
+                "ejercicio": ejercicio,
+                "peso": peso,
+                "series": series,
+                "repeticiones": repeticiones
+            }
+        )
+
+        st.success(
+            f"{ejercicio} agregado"
+        )
+
+    else:
+
+        st.warning(
+            "Ingrese un ejercicio"
+        )
 
 
 
-# Mostrar ejercicios actuales
+# ---------------------------------
+# MOSTRAR ENTRENAMIENTO
+# ---------------------------------
 
 st.divider()
 
@@ -90,8 +147,9 @@ st.subheader("📋 Entrenamiento actual")
 if len(st.session_state.entrenamiento) == 0:
 
     st.info(
-        "Todavía no has agregado ejercicios"
+        "No hay ejercicios agregados"
     )
+
 
 else:
 
@@ -102,8 +160,8 @@ else:
 
         st.write(
             f"""
-            {i}. **{e['ejercicio']}**
-            
+            **{i}. {e['ejercicio']}**
+
             Peso: {e['peso']} kg  
             Series: {e['series']}  
             Repeticiones: {e['repeticiones']}
@@ -112,7 +170,9 @@ else:
 
 
 
-# Guardar todo en Supabase
+# ---------------------------------
+# GUARDAR EN SUPABASE
+# ---------------------------------
 
 st.divider()
 
@@ -123,7 +183,7 @@ if st.button("💾 Finalizar entrenamiento"):
     if len(st.session_state.entrenamiento) == 0:
 
         st.warning(
-            "No hay ejercicios para guardar"
+            "No hay datos para guardar"
         )
 
 
@@ -136,7 +196,6 @@ if st.button("💾 Finalizar entrenamiento"):
 
         for e in st.session_state.entrenamiento:
 
-
             cursor.execute(
                 """
                 INSERT INTO entrenamiento
@@ -146,7 +205,6 @@ if st.button("💾 Finalizar entrenamiento"):
                     series,
                     repeticiones
                 )
-
                 VALUES
                 (
                     %s,
@@ -166,12 +224,9 @@ if st.button("💾 Finalizar entrenamiento"):
 
         conn.commit()
 
-
         cursor.close()
         conn.close()
 
-
-        # limpiar entrenamiento actual
 
         st.session_state.entrenamiento = []
 
@@ -179,3 +234,19 @@ if st.button("💾 Finalizar entrenamiento"):
         st.success(
             "✅ Entrenamiento guardado correctamente"
         )
+
+
+
+# ---------------------------------
+# CERRAR SESIÓN
+# ---------------------------------
+
+st.divider()
+
+
+if st.button("🔒 Cerrar sesión"):
+
+    st.session_state.login = False
+    st.session_state.entrenamiento = []
+
+    st.rerun()
